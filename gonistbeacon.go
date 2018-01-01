@@ -1,53 +1,66 @@
 package beacon
 
-import(
-  "net/http"
-  "encoding/xml"
-  "math/big"
-  "time"
+import (
+	"encoding/xml"
+	"fmt"
+	"math/big"
+	"net/http"
+	"time"
 )
 
-type Record struct{
-  Version string
-  Frequency int
-  TimeStamp time.Time
-  SeedValue big.Int
-  PreviousOutputValue big.Int
-  SignatureValue big.Int
-  OutputValue big.Int
+type Record struct {
+	Version             string
+	Frequency           int
+	TimeStamp           time.Time
+	SeedValue           big.Int
+	PreviousOutputValue big.Int
+	SignatureValue      big.Int
+	OutputValue         big.Int
 }
 
-type dirtyrecord struct{
-  version  string
-  frequency int
-  timeStamp int
-  seedValue string
-  previousOutputValue string
-  signatureValue string
-  outputValue string
+type dirtyrecord struct {
+	version             string
+	frequency           int
+	timeStamp           int64
+	seedValue           string
+	previousOutputValue string
+	signatureValue      string
+	outputValue         string
 }
 
-func(c *http.Client) LastRecord() Record, err {
-  r, err := c.Get("https://beacon.nist.gov/rest/record/last")
-  if err != nil {
-    return nil, err
-  }
+func setString(s string, base int) big.Int {
+	i := new(big.Int)
+	i.SetString(s, base)
+	return (*i)
+}
 
-  var drec dirtyrecord
-  drec, err := xml.Unmarshal(r.Body)
-  if err != nil {
-    return nil, err
-  }
+func LastRecord(cli *http.Client) (Record, error) {
+	r, err := cli.Get("https://beacon.nist.gov/rest/record/last")
+	if err != nil {
+		return Record{}, err
+	}
+	var buf []byte
+	fmt.Println(r.Body.Read(buf))
+	fmt.Println(buf)
 
-  var i big.Int
-  rec := Record{
-    Version : drec.version,
-    Frequency : drec.frequency,
-    TimeStamp : time.Unix(drec.timestamp, 0),
-    SeedValue : i.String(drec.seedValue),
-    PreviousOutputValue : i.String(drec.previousOutputValue),
-    SignatureValue : i.String(drec.signatureValue),
-    OutputValue : i.String(drec.outputValue),
-  }
-  return rec, nil
+	var drec dirtyrecord
+	d := xml.NewDecoder(r.Body)
+	err = d.Decode(&drec)
+	if err != nil {
+		//return Record{}, err
+		panic(err)
+	}
+
+	fmt.Println(drec)
+
+	rec := Record{
+		Version:             drec.version,
+		Frequency:           drec.frequency,
+		TimeStamp:           time.Unix(drec.timeStamp, 0),
+		SeedValue:           setString(drec.seedValue, 16),
+		PreviousOutputValue: setString(drec.previousOutputValue, 16),
+		SignatureValue:      setString(drec.signatureValue, 16),
+		OutputValue:         setString(drec.outputValue, 16),
+	}
+	return rec, nil
 }
