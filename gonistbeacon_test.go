@@ -7,7 +7,7 @@ import (
 )
 
 func TestLastRecord(t *testing.T) {
-	cli := new(http.Client)
+	cli := &http.Client{}
 	resp, err := LastRecord(cli)
 	if err != nil {
 		panic(err)

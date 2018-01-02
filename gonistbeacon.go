@@ -3,6 +3,7 @@ package beacon
 import (
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"time"
@@ -39,8 +40,8 @@ func LastRecord(cli *http.Client) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	var buf []byte
-	fmt.Println(r.Body.Read(buf))
+
+	buf, err := ioutil.ReadAll(r.Body)
 	fmt.Println(buf)
 
 	var drec dirtyrecord
