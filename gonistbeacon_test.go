@@ -2,13 +2,11 @@ package beacon
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 )
 
 func TestLastRecord(t *testing.T) {
-	cli := &http.Client{}
-	resp, err := LastRecord(cli)
+	resp, err := LastRecord()
 	if err != nil {
 		panic(err)
 	}

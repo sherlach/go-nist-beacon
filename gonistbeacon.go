@@ -2,10 +2,10 @@ package beacon
 
 import (
 	"encoding/xml"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -20,13 +20,15 @@ type Record struct {
 }
 
 type dirtyrecord struct {
-	version             string
-	frequency           int
-	timeStamp           int64
-	seedValue           string
-	previousOutputValue string
-	signatureValue      string
-	outputValue         string
+	Record              xml.Name `xml:"record"`
+	Version             string   `xml:"version"`
+	Frequency           string   `xml:"frequency"`
+	TimeStamp           string   `xml:"timeStamp"`
+	SeedValue           string   `xml:"seedValue"`
+	PreviousOutputValue string   `xml:"previousOutputValue"`
+	SignatureValue      string   `xml:"signatureValue"`
+	OutputValue         string   `xml:"outputValue"`
+	StatusCode          string   `xml:"statusCode"`
 }
 
 func setString(s string, base int) big.Int {
@@ -35,33 +37,47 @@ func setString(s string, base int) big.Int {
 	return (*i)
 }
 
-func LastRecord(cli *http.Client) (Record, error) {
-	r, err := cli.Get("https://beacon.nist.gov/rest/record/last")
+func atoi(a string) int {
+	b, err := strconv.Atoi(a)
+	if err != nil {
+		b = -1
+	}
+	return b
+}
+
+var defaultClient = &http.Client{}
+
+// Fetches the latest record from the beacon and returns the record
+func LastRecord() (Record, error) {
+	r, err := defaultClient.Get("https://beacon.nist.gov/rest/record/last")
 	if err != nil {
 		return Record{}, err
 	}
 
 	buf, err := ioutil.ReadAll(r.Body)
-	fmt.Println(buf)
+	if err != nil {
+		return Record{}, err
+	}
 
 	var drec dirtyrecord
-	d := xml.NewDecoder(r.Body)
-	err = d.Decode(&drec)
+	err = xml.Unmarshal(buf, &drec)
 	if err != nil {
-		//return Record{}, err
-		panic(err)
+		return Record{}, err
 	}
-
-	fmt.Println(drec)
 
 	rec := Record{
-		Version:             drec.version,
-		Frequency:           drec.frequency,
-		TimeStamp:           time.Unix(drec.timeStamp, 0),
-		SeedValue:           setString(drec.seedValue, 16),
-		PreviousOutputValue: setString(drec.previousOutputValue, 16),
-		SignatureValue:      setString(drec.signatureValue, 16),
-		OutputValue:         setString(drec.outputValue, 16),
+		Version:             drec.Version,
+		Frequency:           atoi(drec.Frequency),
+		TimeStamp:           time.Unix(int64(atoi(drec.TimeStamp)), 0),
+		SeedValue:           setString(drec.SeedValue, 16),
+		PreviousOutputValue: setString(drec.PreviousOutputValue, 16),
+		SignatureValue:      setString(drec.SignatureValue, 16),
+		OutputValue:         setString(drec.OutputValue, 16),
 	}
 	return rec, nil
+}
+
+// If you want to use your own client, to use a proxy to fetch the data for example.
+func SetClient(cli *http.Client) {
+	defaultClient = cli
 }
