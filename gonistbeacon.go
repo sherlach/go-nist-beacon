@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Record Chewed down version of the records the http server returns
 type Record struct {
 	Version             string
 	Frequency           int
@@ -47,7 +48,7 @@ func atoi(a string) int {
 
 var defaultClient = &http.Client{}
 
-// Fetches the latest record from the beacon and returns the record
+// LastRecord Fetches the latest record from the beacon and returns the record
 func LastRecord() (Record, error) {
 	r, err := defaultClient.Get("https://beacon.nist.gov/rest/record/last")
 	if err != nil {
@@ -77,7 +78,7 @@ func LastRecord() (Record, error) {
 	return rec, nil
 }
 
-// If you want to use your own client, to use a proxy to fetch the data for example.
+// SetClient If you want to use your own client, to use a proxy to fetch the data for example.
 func SetClient(cli *http.Client) {
 	defaultClient = cli
 }
