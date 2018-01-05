@@ -1,3 +1,4 @@
+//Package beacon implements an easy to use, but featurerich NIST Randomness Beacon API Wrapper in go
 package beacon
 
 import (
