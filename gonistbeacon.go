@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Record Chewed down version of the records the http server returns
+// Record is the data the NIST api returns
 type Record struct {
 	Version             string
 	Frequency           int
@@ -35,7 +35,10 @@ type dirtyrecord struct {
 
 func setString(s string, base int) big.Int {
 	i := new(big.Int)
-	i.SetString(s, base)
+	_, err := i.SetString(s, base)
+	if !err {
+		i.SetInt64(-1)
+	}
 	return (*i)
 }
 
@@ -49,9 +52,13 @@ func atoi(a string) int {
 
 var defaultClient = &http.Client{}
 
-// LastRecord Fetches the latest record from the beacon and returns the record
-func LastRecord() (Record, error) {
-	r, err := defaultClient.Get("https://beacon.nist.gov/rest/record/last")
+// SetClient is useful if you want to use your own http client, it adds the possibility to use a proxy to fetch the data for example.
+func SetClient(cli *http.Client) {
+	defaultClient = cli
+}
+
+func getRecord(url string) (Record, error) {
+	r, err := defaultClient.Get(url)
 	if err != nil {
 		return Record{}, err
 	}
@@ -79,7 +86,27 @@ func LastRecord() (Record, error) {
 	return rec, nil
 }
 
-// SetClient If you want to use your own client, to use a proxy to fetch the data for example.
-func SetClient(cli *http.Client) {
-	defaultClient = cli
+// LastRecord fetches the latest record from the beacon and returns the record
+func LastRecord() (Record, error) {
+	return getRecord("https://beacon.nist.gov/rest/record/last")
+}
+
+// CurrentRecord fetches the record closest to the given timestamp
+func CurrentRecord(t time.Time) (Record, error) {
+	return getRecord("https://beacon.nist.gov/rest/record/" + strconv.FormatInt(t.Unix(), 10))
+}
+
+// PreviousRecord fetches the record previous to the given timestamp
+func PreviousRecord(t time.Time) (Record, error) {
+	return getRecord("https://beacon.nist.gov/rest/record/previous/" + strconv.FormatInt(t.Unix(), 10))
+}
+
+// NextRecord fetches the record after the given timestamp
+func NextRecord(t time.Time) (Record, error) {
+	return getRecord("https://beacon.nist.gov/rest/record/next/" + strconv.FormatInt(t.Unix(), 10))
+}
+
+// StartChainRecord fetches the start chain record for the given timestamp
+func StartChainRecord(t time.Time) (Record, error) {
+	return getRecord("https://beacon.nist.gov/rest/record/start-chain/" + strconv.FormatInt(t.Unix(), 10))
 }
