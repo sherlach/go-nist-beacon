@@ -29,3 +29,20 @@ func main() {
 }
 ```
 Using the same seed value the random numbers generated are the same.
+
+A much simpler version of the same would be:
+```
+import (
+  "fmt"
+  "github.com/ClownKnuckle/go-nist-beacon"
+) 
+  
+func main() {
+  ra, err := beacon.NewUpdatedRand()
+  if err != nil {
+    panic(err)
+  }
+  
+  fmt.Println(ra.Int(), ra.Int())
+}
+```
