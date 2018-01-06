@@ -53,3 +53,11 @@ func TestStartChainRecord(t *testing.T) {
 	}
 	spew.Dump(resp)
 }
+
+func TestRandInt(t *testing.T) {
+	r, err := NewUpdatedRand()
+	if err != nil {
+		panic(err)
+	}
+	spew.Dump(r.Int())
+}

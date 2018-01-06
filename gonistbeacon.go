@@ -1,4 +1,4 @@
-//Package beacon implements an easy to use, but featurerich NIST Randomness Beacon API Wrapper in go
+//Package beacon implements an easy to use, but feature rich NIST Randomness Beacon API Wrapper in go
 package beacon
 
 import (
@@ -116,6 +116,7 @@ func StartChainRecord(t time.Time) (Record, error) {
 	return getRecord("https://beacon.nist.gov/rest/record/start-chain/" + strconv.FormatInt(t.Unix(), 10))
 }
 
+// Rand saves the data pertinent to the random generator functions of the library
 type Rand struct {
 	update     bool
 	updateTime time.Time
@@ -131,6 +132,7 @@ func NewRand(r Record) *Rand {
 	return ret
 }
 
+// NewUpdatedRand does the same as NewRand but ensures that the random numbers are generated always with the latest record
 func NewUpdatedRand() (*Rand, error) {
 	rec, err := LastRecord()
 	if err != nil {
@@ -142,11 +144,13 @@ func NewUpdatedRand() (*Rand, error) {
 	return r, nil
 }
 
+// SetSeed sets a new source for the randomness generator
 func (r *Rand) SetSeed(n int64) {
 	r.rand = rand.New(rand.NewSource(n))
 	r.update = false
 }
 
+// Int randomly generates a new int from the given seed
 func (r *Rand) Int() int {
 	if r.update && time.Now().After(r.updateTime.Add(time.Duration(time.Minute*1))) {
 		rec, err := LastRecord()
