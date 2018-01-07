@@ -1,10 +1,12 @@
-//Package beacon implements an easy to use, but featurerich NIST Randomness Beacon API Wrapper in go
+//Package beacon implements an easy to use, but feature rich NIST Randomness Beacon API Wrapper in go
 package beacon
 
 import (
 	"encoding/xml"
+	"errors"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -35,8 +37,8 @@ type dirtyrecord struct {
 
 func setString(s string, base int) big.Int {
 	i := new(big.Int)
-	_, err := i.SetString(s, base)
-	if !err {
+	_, ok := i.SetString(s, base)
+	if !ok {
 		i.SetInt64(-1)
 	}
 	return (*i)
@@ -60,17 +62,20 @@ func SetClient(cli *http.Client) {
 func getRecord(url string) (Record, error) {
 	r, err := defaultClient.Get(url)
 	if err != nil {
+		err = errors.New("Couldn't get the record from the API: " + err.Error())
 		return Record{}, err
 	}
 
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		err = errors.New("Couldn't read the API's response: " + err.Error())
 		return Record{}, err
 	}
 
 	var drec dirtyrecord
 	err = xml.Unmarshal(buf, &drec)
 	if err != nil {
+		err = errors.New("Couldn't unmarshal the API's response: " + err.Error())
 		return Record{}, err
 	}
 
@@ -109,4 +114,52 @@ func NextRecord(t time.Time) (Record, error) {
 // StartChainRecord fetches the start chain record for the given timestamp
 func StartChainRecord(t time.Time) (Record, error) {
 	return getRecord("https://beacon.nist.gov/rest/record/start-chain/" + strconv.FormatInt(t.Unix(), 10))
+}
+
+// Rand saves the data pertinent to the random generator functions of the library
+type Rand struct {
+	update     bool
+	updateTime time.Time
+	rand       *rand.Rand
+}
+
+// NewRand creates a new random number generator using the given record's SeedValue>>MaxInt64 as source
+func NewRand(r Record) *Rand {
+	ret := new(Rand)
+	ret.rand = new(rand.Rand)
+	i := new(big.Int)
+	ret.SetSeed(i.Rsh(&r.SeedValue, 448).Int64())
+	return ret
+}
+
+// NewUpdatedRand does the same as NewRand but ensures that the random numbers are generated always with the latest record
+func NewUpdatedRand() (*Rand, error) {
+	rec, err := LastRecord()
+	if err != nil {
+		return nil, err
+	}
+	r := NewRand(rec)
+	r.update = true
+	r.updateTime = rec.TimeStamp
+	return r, nil
+}
+
+// SetSeed sets a new source for the randomness generator
+func (r *Rand) SetSeed(n int64) {
+	r.rand = rand.New(rand.NewSource(n))
+	r.update = false
+}
+
+// Int randomly generates a new int from the given seed
+func (r *Rand) Int() int {
+	if r.update && time.Now().After(r.updateTime.Add(time.Duration(time.Minute*1))) {
+		rec, err := LastRecord()
+		if err != nil {
+			panic(errors.New("Couldn't update to the last record: " + err.Error()))
+		}
+		r.updateTime = rec.TimeStamp
+		i := new(big.Int)
+		r.SetSeed(i.Rsh(&rec.SeedValue, 448).Int64())
+	}
+	return r.rand.Int()
 }

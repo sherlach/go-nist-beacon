@@ -53,3 +53,27 @@ func TestStartChainRecord(t *testing.T) {
 	}
 	spew.Dump(resp)
 }
+
+func TestNewRand(t *testing.T) {
+	rec, err := LastRecord()
+	if err != nil {
+		panic(err)
+	}
+	r := NewRand(rec)
+
+	spew.Dump(r.Int())
+}
+
+func TestNewUpdatedRand(t *testing.T) {
+	r, err := NewUpdatedRand()
+	if err != nil {
+		panic(err)
+	}
+	a := r.Int()
+	spew.Dump(a)
+	time.Sleep(time.Second * 60)
+	b := r.Int()
+	if a == b {
+		t.FailNow()
+	}
+}
