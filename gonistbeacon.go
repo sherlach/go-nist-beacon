@@ -2,8 +2,14 @@
 package beacon
 
 import (
+	"bytes"
+	"crypto/x509"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/pem"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -35,6 +41,51 @@ type dirtyrecord struct {
 	StatusCode          string   `xml:"statusCode"`
 }
 
+const beaconCertPEM = `
+-----BEGIN CERTIFICATE-----
+MIIHZTCCBk2gAwIBAgIESTWNPjANBgkqhkiG9w0BAQsFADBtMQswCQYDVQQGEwJV
+UzEQMA4GA1UEChMHRW50cnVzdDEiMCAGA1UECxMZQ2VydGlmaWNhdGlvbiBBdXRo
+b3JpdGllczEoMCYGA1UECxMfRW50cnVzdCBNYW5hZ2VkIFNlcnZpY2VzIFNTUCBD
+QTAeFw0xNDA1MDcxMzQ4MzZaFw0xNzA1MDcxNDE4MzZaMIGtMQswCQYDVQQGEwJV
+UzEYMBYGA1UEChMPVS5TLiBHb3Zlcm5tZW50MR8wHQYDVQQLExZEZXBhcnRtZW50
+IG9mIENvbW1lcmNlMTcwNQYDVQQLEy5OYXRpb25hbCBJbnN0aXR1dGUgb2YgU3Rh
+bmRhcmRzIGFuZCBUZWNobm9sb2d5MRAwDgYDVQQLEwdEZXZpY2VzMRgwFgYDVQQD
+Ew9iZWFjb24ubmlzdC5nb3YwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
+AQC/m2xcckaSYztt6/6YezaUmqIqY5CLvrfO2esEIJyFg+cv7S7exL3hGYeDCnQL
+VtUIGViAnO9yCXDC2Kymen+CekU7WEtSB96xz/xGrY3mbwjS46QSOND9xSRMroF9
+xbgqXxzJ7rL/0RMUkku3uurGb/cxUpzKt6ra7iUnzkk3BBk73kr2OXFyYYbtrN71
+s0B9qKKJZuPQqmA5n80Xc3E2YbaoAW4/gesncFNL7Sdxw9NIA1L4feu/o8xp3FNP
+pv2e25C0113x+yagvb1W0mw6ISwAKhJ+6G4t4hFejl7RujuiDfORgzIhHMR4CyWt
+PZFVn2qxZuVooj1+mduLIXhDAgMBAAGjggPKMIIDxjAOBgNVHQ8BAf8EBAMCBsAw
+FwYDVR0gBBAwDjAMBgpghkgBZQMCAQMHMIIBXgYIKwYBBQUHAQEEggFQMIIBTDCB
+uAYIKwYBBQUHMAKGgatsZGFwOi8vc3NwZGlyLm1hbmFnZWQuZW50cnVzdC5jb20v
+b3U9RW50cnVzdCUyME1hbmFnZWQlMjBTZXJ2aWNlcyUyMFNTUCUyMENBLG91PUNl
+cnRpZmljYXRpb24lMjBBdXRob3JpdGllcyxvPUVudHJ1c3QsYz1VUz9jQUNlcnRp
+ZmljYXRlO2JpbmFyeSxjcm9zc0NlcnRpZmljYXRlUGFpcjtiaW5hcnkwSwYIKwYB
+BQUHMAKGP2h0dHA6Ly9zc3B3ZWIubWFuYWdlZC5lbnRydXN0LmNvbS9BSUEvQ2Vy
+dHNJc3N1ZWRUb0VNU1NTUENBLnA3YzBCBggrBgEFBQcwAYY2aHR0cDovL29jc3Au
+bWFuYWdlZC5lbnRydXN0LmNvbS9PQ1NQL0VNU1NTUENBUmVzcG9uZGVyMBsGA1Ud
+CQQUMBIwEAYJKoZIhvZ9B0QdMQMCASIwggGHBgNVHR8EggF+MIIBejCB6qCB56CB
+5IaBq2xkYXA6Ly9zc3BkaXIubWFuYWdlZC5lbnRydXN0LmNvbS9jbj1XaW5Db21i
+aW5lZDEsb3U9RW50cnVzdCUyME1hbmFnZWQlMjBTZXJ2aWNlcyUyMFNTUCUyMENB
+LG91PUNlcnRpZmljYXRpb24lMjBBdXRob3JpdGllcyxvPUVudHJ1c3QsYz1VUz9j
+ZXJ0aWZpY2F0ZVJldm9jYXRpb25MaXN0O2JpbmFyeYY0aHR0cDovL3NzcHdlYi5t
+YW5hZ2VkLmVudHJ1c3QuY29tL0NSTHMvRU1TU1NQQ0ExLmNybDCBiqCBh6CBhKSB
+gTB/MQswCQYDVQQGEwJVUzEQMA4GA1UEChMHRW50cnVzdDEiMCAGA1UECxMZQ2Vy
+dGlmaWNhdGlvbiBBdXRob3JpdGllczEoMCYGA1UECxMfRW50cnVzdCBNYW5hZ2Vk
+IFNlcnZpY2VzIFNTUCBDQTEQMA4GA1UEAxMHQ1JMNjY3MzArBgNVHRAEJDAigA8y
+MDE0MDUwNzEzNDgzNlqBDzIwMTYwNjEyMTgxODM2WjAfBgNVHSMEGDAWgBTTzudb
+iafNbJHGZzapWHIJ7OI58zAdBgNVHQ4EFgQUGIOcf6r7Z9wk+2/YuG5oTs7Qwk8w
+CQYDVR0TBAIwADAZBgkqhkiG9n0HQQAEDDAKGwRWOC4xAwIEsDANBgkqhkiG9w0B
+AQsFAAOCAQEASc+lZBbJWsHB2WnaBr8ZfBqpgS51Eh+wLchgIq7JHhVn+LagkR8C
+XmvP57a0L/E+MRBqvH2RMqwthEcjXio2WIu/lyKZmg2go9driU6H3s89X8snblDF
+1B+iL73vhkLVdHXgStMS8AHbm+3BW6yjHens1tVmKSowg1P/bGT3Z4nmamdY9oLm
+9sCgFccthC1BQqtPv1XsmLshJ9vmBbYMsjKq4PmS0aLA59J01YMSq4U1kzcNS7wI
+1/YfUrfeV+r+j7LKBgNQTZ80By2cfSalEqCe8oxqViAz6DsfPCBeE57diZNLiJmj
+a2wWIBquIAXxvD8w2Bue7pZVeUHls5V5dA==
+-----END CERTIFICATE-----
+`
+
 func setString(s string, base int) big.Int {
 	i := new(big.Int)
 	_, ok := i.SetString(s, base)
@@ -57,6 +108,56 @@ var defaultClient = &http.Client{}
 // SetClient is useful if you want to use your own http client, it adds the possibility to use a proxy to fetch the data for example.
 func SetClient(cli *http.Client) {
 	defaultClient = cli
+}
+
+func beaconCertificate() *x509.Certificate {
+	pemBlock, remainder := pem.Decode([]byte(beaconCertPEM))
+	if len(remainder) > 0 {
+		panic(fmt.Sprintf("have %d bytes left in PEM", len(remainder)))
+	}
+	certChain, err := x509.ParseCertificates(pemBlock.Bytes)
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(certChain) != 1 {
+		panic(fmt.Sprintf("have %d certificates in beacon PEM, not 1", len(certChain)))
+	}
+	return certChain[0]
+}
+
+func ValidateSignature(cert x509.Certificate, signed []byte, signature []byte) error {
+	return cert.CheckSignature(x509.SHA512WithRSA, signed, signature)
+}
+
+func (d dirtyrecord) VerificationData() (signed, signature []byte, err error) {
+	signature, err = hex.DecodeString(d.SignatureValue)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sigLimit := len(signature) - 1
+	for i := 0; i <= sigLimit/2; i++ {
+		signature[i], signature[sigLimit-i] = signature[sigLimit-i], signature[i]
+	}
+
+	b := new(bytes.Buffer)
+	b.Grow(200)
+	_, _ = b.WriteString(d.Version)
+	binary.Write(b, binary.BigEndian, d.Frequency)
+	binary.Write(b, binary.BigEndian, d.TimeStamp)
+	seed, err := hex.DecodeString(d.SeedValue)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, _ = b.Write(seed)
+	prev, err := hex.DecodeString(d.PreviousOutputValue)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, _ = b.Write(prev)
+	binary.Write(b, binary.BigEndian, d.StatusCode)
+
+	return b.Bytes(), signature, nil
 }
 
 func getRecord(url string) (Record, error) {
@@ -88,6 +189,19 @@ func getRecord(url string) (Record, error) {
 		SignatureValue:      setString(drec.SignatureValue, 16),
 		OutputValue:         setString(drec.OutputValue, 16),
 	}
+
+	data, sig, err := drec.VerificationData()
+	if err != nil {
+		return Record{}, errors.New("Unable to extract verification data")
+	}
+	err = ValidateSignature(*beaconCertificate(), data, sig)
+	if err != nil {
+		return Record{}, errors.New("Unable to validate beacon signature")
+	}
+	if time.Now().Unix() - rec.TimeStamp.Unix() > 60 {
+		return Record{}, errors.New("Beacon is stale")
+	}
+
 	return rec, nil
 }
 
