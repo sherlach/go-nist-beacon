@@ -4,9 +4,11 @@ package beacon
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -90,6 +92,13 @@ func PreviousRecord(t time.Time) (Record, error) {
 // NextRecord fetches the record after the given timestamp
 func NextRecord(t time.Time) (Record, error) {
 	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/next/" + strconv.FormatInt(t.Unix(), 10))
+}
+
+func (rec *Record) ChainpointFormat() string {
+	if rec.Pulse.LocalRandomValue != "" {
+		return fmt.Sprintf("%d:%s", rec.Pulse.TimeStamp.Unix(), strings.ToLower(rec.Pulse.LocalRandomValue))
+	}
+	return ""
 }
 
 
