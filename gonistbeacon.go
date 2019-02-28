@@ -68,7 +68,7 @@ func getRecord(url string) (Record, error) {
 	}
 
 	if time.Now().Unix() - rec.Pulse.TimeStamp.Unix() > 60 {
-		return Record{}, errors.New("Beacon is stale")
+		return Record{}, errors.New(fmt.Sprintf("Beacon is stale: current=%d, pulse=%d", time.Now().Unix(), rec.Pulse.TimeStamp.Unix()))
 	}
 
 	return rec, nil
