@@ -96,7 +96,7 @@ func NextRecord(t time.Time) (Record, error) {
 
 func (rec *Record) ChainpointFormat() string {
 	if rec.Pulse.LocalRandomValue != "" {
-		return fmt.Sprintf("%d:%s", rec.Pulse.TimeStamp.Unix(), strings.ToLower(rec.Pulse.LocalRandomValue))
+		return fmt.Sprintf("%d:%s", rec.Pulse.TimeStamp.Unix(), strings.ToLower(rec.Pulse.OutputValue))
 	}
 	return ""
 }
