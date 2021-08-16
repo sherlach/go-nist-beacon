@@ -41,6 +41,7 @@ type Record struct {
 }
 
 var defaultClient = &http.Client{}
+
 //const outdated = 60
 const outdated = 120
 
@@ -68,17 +69,21 @@ func getRecord(url string) (Record, error) {
 		err = errors.New("Couldn't unmarshal the API's response: " + err.Error())
 		return Record{}, err
 	}
-
-	if time.Now().Unix() - rec.Pulse.TimeStamp.Unix() > outdated {
-		return rec, errors.New(fmt.Sprintf("Beacon is stale: current=%d, pulse=%d", time.Now().Unix(), rec.Pulse.TimeStamp.Unix()))
-	}
-
 	return rec, nil
 }
 
 // LastRecord fetches the latest record from the beacon and returns the record
 func LastRecord() (Record, error) {
-	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/last")
+	rec, err := getRecord("https://beacon.nist.gov/beacon/2.0/pulse/last")
+	if err != nil {
+		return rec, err
+	}
+
+	if time.Now().Unix()-rec.Pulse.TimeStamp.Unix() > outdated {
+		return rec, errors.New(fmt.Sprintf("Beacon is stale: current=%d, pulse=%d", time.Now().Unix(), rec.Pulse.TimeStamp.Unix()))
+	}
+
+	return rec, nil
 }
 
 // CurrentRecord fetches the record closest to the given timestamp
@@ -102,5 +107,3 @@ func (rec *Record) ChainpointFormat() string {
 	}
 	return ""
 }
-
-
