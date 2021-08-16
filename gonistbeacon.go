@@ -88,6 +88,7 @@ func LastRecord() (Record, error) {
 
 // CurrentRecord fetches the record closest to the given timestamp
 func CurrentRecord(t time.Time) (Record, error) {
+	fmt.Println("https://beacon.nist.gov/beacon/2.0/pulse/time/" + strconv.FormatInt(t.Unix(), 10))
 	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/" + strconv.FormatInt(t.Unix(), 10))
 }
 
