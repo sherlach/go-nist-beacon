@@ -14,7 +14,7 @@ func TestLastRecord(t *testing.T) {
 	spew.Dump(resp)
 }
 
-//If if returns an error the test was a sucess, since there is no current record as new as now. If it fails, check if your system clock is running correctly
+//If it returns an error the test was a sucess, since there is no current record as new as now. If it fails, check if your system clock is running correctly
 func TestCurrentRecord(t *testing.T) {
 	resp, err := NextRecord(time.Now())
 	if err == nil {
@@ -37,7 +37,7 @@ func TestPreviousRecord(t *testing.T) {
 	spew.Dump(resp)
 }
 
-//If if returns an error the test was a sucess, since there is no next record to the latest one. If it fails, check if your system clock is running correctly
+//If it returns an error the test was a sucess, since there is no next record to the latest one. If it fails, check if your system clock is running correctly
 func TestNextRecord(t *testing.T) {
 	resp, err := NextRecord(time.Now())
 	if err == nil {
