@@ -13,7 +13,7 @@ NIST Randomness Beacon (https://beacon.nist.gov/home) api wrapper
 ```
 import (
   "fmt"
-  "github.com/ClownKnuckle/go-nist-beacon"
+  "github.com/sherlach/go-nist-beacon"
   "math/big"
   "math/rand"
 ) 
