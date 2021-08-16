@@ -50,7 +50,7 @@ func SetClient(cli *http.Client) {
 	defaultClient = cli
 }
 
-func getRecord(url string) (Record, error) {
+func GetRecord(url string) (Record, error) {
 	r, err := defaultClient.Get(url)
 	if err != nil {
 		err = errors.New("Couldn't get the record from the API: " + err.Error())
@@ -74,7 +74,7 @@ func getRecord(url string) (Record, error) {
 
 // LastRecord fetches the latest record from the beacon and returns the record
 func LastRecord() (Record, error) {
-	rec, err := getRecord("https://beacon.nist.gov/beacon/2.0/pulse/last")
+	rec, err := GetRecord("https://beacon.nist.gov/beacon/2.0/pulse/last")
 	if err != nil {
 		return rec, err
 	}
@@ -89,17 +89,17 @@ func LastRecord() (Record, error) {
 // CurrentRecord fetches the record closest to the given timestamp
 func CurrentRecord(t time.Time) (Record, error) {
 	fmt.Println("https://beacon.nist.gov/beacon/2.0/pulse/time/" + strconv.FormatInt(t.Unix(), 10))
-	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/" + strconv.FormatInt(t.Unix(), 10))
+	return GetRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/" + strconv.FormatInt(t.Unix(), 10))
 }
 
 // PreviousRecord fetches the record previous to the given timestamp
 func PreviousRecord(t time.Time) (Record, error) {
-	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/previous/" + strconv.FormatInt(t.Unix(), 10))
+	return GetRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/previous/" + strconv.FormatInt(t.Unix(), 10))
 }
 
 // NextRecord fetches the record after the given timestamp
 func NextRecord(t time.Time) (Record, error) {
-	return getRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/next/" + strconv.FormatInt(t.Unix(), 10))
+	return GetRecord("https://beacon.nist.gov/beacon/2.0/pulse/time/next/" + strconv.FormatInt(t.Unix(), 10))
 }
 
 func (rec *Record) ChainpointFormat() string {
