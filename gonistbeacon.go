@@ -41,6 +41,8 @@ type Record struct {
 }
 
 var defaultClient = &http.Client{}
+//const outdated = 60
+const outdated = 120
 
 // SetClient is useful if you want to use your own http client, it adds the possibility to use a proxy to fetch the data for example.
 func SetClient(cli *http.Client) {
@@ -67,7 +69,7 @@ func getRecord(url string) (Record, error) {
 		return Record{}, err
 	}
 
-	if time.Now().Unix() - rec.Pulse.TimeStamp.Unix() > 60 {
+	if time.Now().Unix() - rec.Pulse.TimeStamp.Unix() > outdated {
 		return rec, errors.New(fmt.Sprintf("Beacon is stale: current=%d, pulse=%d", time.Now().Unix(), rec.Pulse.TimeStamp.Unix()))
 	}
 
